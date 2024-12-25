@@ -121,8 +121,8 @@ async function run() {
 
 
 
-      const cursor = ApplyCollection.find(query);
-     const result = await cursor.toArray();
+      const result = ApplyCollection.find(query).toArray();
+     
       res.send(result);
     });
     app.get("/rooms/:id", async (req, res) => {
