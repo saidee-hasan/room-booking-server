@@ -66,11 +66,15 @@ async function run() {
         res.status(500).send("Internal Server Error");
       }
     });
+
+    
+
     app.get("/review", async (req, res) => {
-      const cursor = reviewCollection.find();
+      const cursor = reviewCollection.find().sort({ timestamp: -1 });
       const result = await cursor.toArray();
       res.send(result);
     });
+
     app.post("/review", async (req, res) => {
       const newReview = req.body;
       newReview.timestamp = new Date();
@@ -111,8 +115,14 @@ async function run() {
     });
 
     app.get("/apply", async (req, res) => {
-      const cursor = ApplyCollection.find();
-      const result = await cursor.toArray();
+      const email = req.query.email;
+      const query = { email: email };
+
+
+
+
+      const cursor = ApplyCollection.find(query);
+     const result = await cursor.toArray();
       res.send(result);
     });
     app.get("/rooms/:id", async (req, res) => {
