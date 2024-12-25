@@ -66,10 +66,25 @@ async function run() {
       }
     });
 
+
+
+
     
 
     app.get("/review", async (req, res) => {
-      const cursor = reviewCollection.find().sort({ timestamp: -1 });
+    
+      const  roomId = req.query. roomId;
+     
+      let query = {};
+      if( roomId){
+        query ={
+          roomId:  roomId}
+      }
+
+
+
+
+      const cursor = reviewCollection.find(query).sort({ timestamp: -1 });
       const result = await cursor.toArray();
       res.send(result);
     });
