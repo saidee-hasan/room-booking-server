@@ -42,7 +42,6 @@ async function run() {
     app.post("/apply", async (req, res) => {
       const newApply = req.body;
       const query = { email: newApply.email, booking_id: newApply.booking_id };
-
       try {
         const existingEntry = await ApplyCollection.findOne(query);
         console.log(existingEntry);
@@ -116,15 +115,13 @@ async function run() {
 
     app.get("/apply", async (req, res) => {
       const email = req.query.email;
-      const query = { email: email };
+      const query = {email: email };
 
-
-
-
-      const result = ApplyCollection.find(query).toArray();
+      const result = await ApplyCollection.find(query).toArray();
      
       res.send(result);
     });
+    
     app.get("/rooms/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
