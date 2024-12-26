@@ -24,20 +24,7 @@ async function run() {
     const ApplyCollection = client.db("hotel").collection("apply");
     const reviewCollection = client.db("hotel").collection("review");
 
-
-    app.get("/rooms", async (req, res) => {
-      const email = req.query.email;
-     
-      let query = {};
-      if(email){
-        query ={
-          hr_email : email}
-      }
-
-      const cursor = roomsCollection.find(query);
-      const result = await cursor.toArray();
-      res.send(result);
-    });
+ 
 
     app.post("/apply", async (req, res) => {
       const newApply = req.body;
@@ -56,7 +43,7 @@ async function run() {
         // Update the room count
         const filter = { _id: new ObjectId(newApply.booking_id) };
         const update = { $inc: { room_count: 1 } };
-         await roomsCollection.updateOne(filter, update);
+        await roomsCollection.updateOne(filter, update);
 
         // Send the result of the insert operation back to the client
         res.send(result);
@@ -66,23 +53,15 @@ async function run() {
       }
     });
 
-
-
-
-    
-
     app.get("/review", async (req, res) => {
-    
-      const  roomId = req.query. roomId;
-     
+      const roomId = req.query.roomId;
+
       let query = {};
-      if( roomId){
-        query ={
-          roomId:  roomId}
+      if (roomId) {
+        query = {
+          roomId: roomId,
+        };
       }
-
-
-
 
       const cursor = reviewCollection.find(query).sort({ timestamp: -1 });
       const result = await cursor.toArray();
@@ -129,14 +108,44 @@ async function run() {
     });
 
     app.get("/apply", async (req, res) => {
-      const email = req.query.email;
-      const query = {email: email };
+      const id = req.query.booking_id;
+
+      let query = {};
+      if (id) {
+        query = {
+          booking_id: id,
+        };
+      }
 
       const result = await ApplyCollection.find(query).toArray();
-     
       res.send(result);
     });
-    
+
+    app.get("/rooms", async (req, res) => {
+      const email = req.query.email;
+      const { minPrice, maxPrice } = req.query;
+
+      let query = {};
+
+      if (minPrice) query.price = { $gte: Number(minPrice) };
+
+      if (maxPrice) {
+        query.price = query.price
+          ? { ...query.price, $lte: Number(maxPrice) }
+          : { $lte: Number(maxPrice) };
+      }
+
+      if (email) {
+        query.email = email;
+      }
+
+      try {
+        const rooms = await roomsCollection.find(query).toArray();
+        res.json(rooms); // Send the rooms as response
+      } catch (error) {
+        res.status(500).send({ error: "Failed to fetch rooms" });
+      }
+    });
     app.get("/rooms/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
