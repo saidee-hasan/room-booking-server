@@ -3,8 +3,10 @@ const cors = require("cors");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const app = express();
 const port = process.env.PORT || 5000;
+const jwt = require('jsonwebtoken');
+const cookie = require('cookie-parser');
 app.use(express.json());
-
+app.use(cookie())
 app.use(cors());
 require("dotenv").config();
 
@@ -25,6 +27,18 @@ async function run() {
     const reviewCollection = client.db("hotel").collection("review");
 
  
+app.post('/jwt',async(req,res)=>{
+
+  const user = req.body;
+  const token = jwt.sign(user , process.env.JWT_SECRET ,{expiresIn:'1h'})
+  res.cookie('token',token,{
+    httOnly : true,
+    secure:false,
+
+  })
+  .send({success:true})
+})
+
 
     app.post("/apply", async (req, res) => {
       const newApply = req.body;
