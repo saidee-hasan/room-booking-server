@@ -3,18 +3,32 @@ const cors = require("cors");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const app = express();
 const port = process.env.PORT || 5000;
-const jwt = require('jsonwebtoken');
-const cookieParser = require('cookie-parser');
+const jwt = require("jsonwebtoken");
+const cookieParser = require("cookie-parser");
 app.use(express.json());
-app.use(cookieParser())
-app.use(cors( {
-  origin: ['http://localhost:5173'],
-  credentials: true // Allow credentials (cookies, authorization headers, etc.)
-}));
+app.use(cookieParser());
+app.use(
+  cors({
+    origin: ["http://localhost:5173"],
+    credentials: true, // Allow credentials (cookies, authorization headers, etc.)
+  })
+);
 require("dotenv").config();
+const verifyToken = async (req, res, next) => {
+  const token = req?.cookies?.token;
+  if (!token) {
+    return res.status(401).send({ message: "Unauthorized access" });
+  }
 
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+    if (err) {
+      return res.status(401).send({ message: "Unauthorized access" });
+    }
+    req.user = decoded;
 
-
+    next();
+  });
+};
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@hotel.q9chu.mongodb.net/?retryWrites=true&w=majority&appName=Hotel`;
 
@@ -32,19 +46,18 @@ async function run() {
     const ApplyCollection = client.db("hotel").collection("apply");
     const reviewCollection = client.db("hotel").collection("review");
 
- 
-app.post('/jwt',async(req,res)=>{
-
-  const user = req.body;
-  const token = jwt.sign(user , process.env.ACCESS_TOKEN_SECRET ,{expiresIn:'1h'})
-  res.cookie('token',token,{
-    httOnly : true,
-    secure:false,
-
-  })
-  .send({success:true})
-})
-
+    app.post("/jwt", async (req, res) => {
+      const user = req.body;
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
+        expiresIn: "1h",
+      });
+      res
+        .cookie("token", token, {
+          httOnly: true,
+          secure: false,
+        })
+        .send({ success: true });
+    });
 
     app.post("/apply", async (req, res) => {
       const newApply = req.body;
@@ -97,7 +110,7 @@ app.post('/jwt',async(req,res)=>{
 
     app.put("/apply/:id", async (req, res) => {
       const id = req.params.id;
-      console.log('cuk ck toto',req.cookies)
+      console.log("cuk ck toto", req.cookies);
       const query = { _id: new ObjectId(id) };
       const updateDate = req.body;
 
@@ -128,17 +141,16 @@ app.post('/jwt',async(req,res)=>{
       res.send(result);
     });
 
-    app.get("/apply", async (req, res) => {
-      const id = req.query.booking_id;
+    app.get("/apply", verifyToken, async (req, res) => {
+      const email = req.query.email;
+      const query = { email: email };
 
-      let query = {};
-      if (id) {
-        query = {
-          booking_id: id,
-        };
+      if(req.user.email !== email){
+        return res.status(403).send({ message: 'Forbidden access' });
       }
 
-      const result = await ApplyCollection.find(query).toArray();
+      const cursor = ApplyCollection.find(query);
+      const result = await cursor.toArray();
       res.send(result);
     });
 
