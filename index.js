@@ -4,11 +4,17 @@ const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const app = express();
 const port = process.env.PORT || 5000;
 const jwt = require('jsonwebtoken');
-const cookie = require('cookie-parser');
+const cookieParser = require('cookie-parser');
 app.use(express.json());
-app.use(cookie())
-app.use(cors());
+app.use(cookieParser())
+app.use(cors( {
+  origin: ['http://localhost:5173'],
+  credentials: true // Allow credentials (cookies, authorization headers, etc.)
+}));
 require("dotenv").config();
+
+
+
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@hotel.q9chu.mongodb.net/?retryWrites=true&w=majority&appName=Hotel`;
 
@@ -30,7 +36,7 @@ async function run() {
 app.post('/jwt',async(req,res)=>{
 
   const user = req.body;
-  const token = jwt.sign(user , process.env.JWT_SECRET ,{expiresIn:'1h'})
+  const token = jwt.sign(user , process.env.ACCESS_TOKEN_SECRET ,{expiresIn:'1h'})
   res.cookie('token',token,{
     httOnly : true,
     secure:false,
@@ -91,6 +97,7 @@ app.post('/jwt',async(req,res)=>{
 
     app.put("/apply/:id", async (req, res) => {
       const id = req.params.id;
+      console.log('cuk ck toto',req.cookies)
       const query = { _id: new ObjectId(id) };
       const updateDate = req.body;
 
