@@ -8,31 +8,33 @@ const cookieParser = require('cookie-parser');
 app.use(express.json());
 app.use(cookieParser())
 app.use(cors( {
-  origin: ['http://localhost:5173'],
+  origin: ['http://localhost:5173','https://rooms-booking.netlify.app'],
   credentials: true // Allow credentials (cookies, authorization headers, etc.)
 }));
 require("dotenv").config();
-const verifyToken = async(req,res,next)=>{
-  const token =req?.cookies?.token;
-if(!token){
-  return res.status(401).send({ message: 'Unauthorized access' });
-}
 
-jwt.verify(token,process.env.ACCESS_TOKEN_SECRET,(err, decoded) => {
 
-  if (err) {
-    return res.status(401).send({ message: 'Unauthorized access' });
-
-}
-req.user = decoded
-
-next()
+const verifyToken = (req,res,next)=>{
+ const token = req?.cookies?.token;
+ if(!token){
+  return res.status(401).send({massage:'Unauthorized access'})
+ }
+// verify token
+jwt.verify(token,process.env.ACCESS_TOKEN_SECRET,(err,decoded)=>{
+  if(err){
+    return res.status(401).send({massage:'Unauthorized access'})
+   }
+   req.user= decoded
+   next()
 })
 
-  
 
+
+ 
 
 }
+
+
 
 
 
@@ -56,15 +58,25 @@ async function run() {
 app.post('/jwt',async(req,res)=>{
 
   const user = req.body;
-  const token = jwt.sign(user , process.env.ACCESS_TOKEN_SECRET ,{expiresIn:'1h'})
+  const token = jwt.sign(user , process.env.ACCESS_TOKEN_SECRET ,{expiresIn:'5h'})
   res.cookie('token',token,{
     httOnly : true,
-    secure:false,
+    secure:process.env.NODE_ENV === 'production',
+    sameSite:process.env.NODE_ENV === 'production' ? 'none': "strict",
 
   })
   .send({success:true})
 })
 
+app.post('/logout',async(req,res)=>{
+  res.cookie('token',{
+    httOnly : true,
+    secure:process.env.NODE_ENV === 'production',
+    sameSite:process.env.NODE_ENV === 'production' ? 'none': "strict",
+
+  })
+  .send({success:true})
+})
 
     app.post("/apply", async (req, res) => {
       const newApply = req.body;
@@ -148,9 +160,13 @@ app.post('/jwt',async(req,res)=>{
       res.send(result);
     });
 
-    app.get("/apply", async (req, res) => {
+    app.get("/apply",verifyToken, async (req, res) => {
       const email = req.query.email;
       const query = { email: email };
+      if(req.user.email !== email){
+        return res.status(403).send({ message: 'Forbidden access' });
+      }
+ 
       const cursor = ApplyCollection.find(query);
      const result = await cursor.toArray();
       res.send(result);
@@ -158,26 +174,37 @@ app.post('/jwt',async(req,res)=>{
 
     app.get("/appl", async (req, res) => {
       try {
-        const id = req.query.id;
+        // Extract query parameters
+        const { roomId, email, booking_id } = req.query;
     
-        // Validate the ID
-        if (!id) {
-          return res.status(400).send({ message: "Booking ID is required" });
+        // Create a query object
+        const query = {};
+        
+        // Add filters based on provided query parameters
+        if (roomId) {
+          query.roomId = roomId; // Filter by roomId
+        }
+        if (email) {
+          query.email = email; // Filter by email
+        }
+        if (booking_id) {
+          query.booking_id = booking_id; // Filter by booking_id
         }
     
-        const query = { booking_id: id };
+        // Execute the query
         const cursor = ApplyCollection.find(query);
         const result = await cursor.toArray();
     
         // Check if any results were found
         if (result.length === 0) {
-          return res.status(404).send({ message: "No applications found for this booking ID" });
+          return res.status(404).send({ message: "No bookings found matching the criteria" });
         }
     
-        res.send(result);
+        // Send the result back to the client
+        res.status(200).send(result);
       } catch (error) {
-        console.error("Error fetching applications:", error);
-        res.status(500).send({ message: "Internal Server Error" });
+        console.error("Error fetching bookings:", error);
+        res.status(500).send({ error: "An error occurred while fetching bookings" });
       }
     });
 
